@@ -1,4 +1,4 @@
-function [A,b,x,r] = random_ls_problem(m,n,cond_A,res_size)
+function [A,b,x,r,S,V] = random_ls_problem(m,n,cond_A,res_size)
 U = haarorth(m);
 V = haarorth(n);
 S = diag(logspace(-log10(cond_A),0,n));
