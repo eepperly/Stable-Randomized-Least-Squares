@@ -1,6 +1,7 @@
 %% Set up problem
 
 addpath('../code')
+addpath('../utils')
 
 rng(121842)
 

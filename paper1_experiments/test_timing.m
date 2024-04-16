@@ -1,6 +1,8 @@
 %% Load SUSY data
 
 addpath('../code')
+addpath('../utils')
+
 load('../data/susy.mat')
 X = X(1:1e6,:); b = b(1:1e6);
 bandwidth = 4;

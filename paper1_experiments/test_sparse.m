@@ -1,6 +1,8 @@
 %% Load sparse data
 
 addpath('../code')
+addpath('../utils')
+
 N = 3e6;
 b = randn(N,1);
 sizes = round(logspace(1,3,11));

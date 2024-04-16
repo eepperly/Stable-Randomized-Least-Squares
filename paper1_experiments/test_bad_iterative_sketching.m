@@ -2,6 +2,7 @@
 
 addpath("bad_implementations/")
 addpath("../code")
+addpath('../utils')
 
 rng(223492034)
 

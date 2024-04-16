@@ -1,6 +1,7 @@
 %% Set up problem
 
 addpath('../code')
+addpath('../utils')
 
 m = 4000;
 n = 50;
