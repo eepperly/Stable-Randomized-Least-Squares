@@ -15,6 +15,8 @@ function [x,stats] = iterative_sketching(A,b,varargin)
 %     coefficient will be computed as a function of d and n.
 %   - momentum: momentum coefficient (default 0). If 'optimal', the optimal
 %     coefficient will be computed as a function of d and n.
+%   - reproducible: if true, use slower, reproducible implementation of
+%     sparse sign embeddings (default false)
 
     m = size(A,1);
     n = size(A,2);
@@ -23,13 +25,6 @@ function [x,stats] = iterative_sketching(A,b,varargin)
         d = varargin{1};
     elseif issparse(A)
         d = 30*n;
-        if length(varargin) >= 5 && ~isempty(varargin{5}) && strcmp(varargin{5}, 'optimal') 
-            if length(varargin) >= 6 && ~isempty(varargin{6}) && strcmp(varargin{6}, 'optimal') 
-                d = 30*n;
-            else
-                d = 30*n;
-            end
-        end
     else
         if length(varargin) >= 5 && ~isempty(varargin{5}) && strcmp(varargin{5}, 'optimal') 
             if length(varargin) >= 6 && ~isempty(varargin{6}) && strcmp(varargin{6}, 'optimal') 
