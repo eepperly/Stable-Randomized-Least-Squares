@@ -77,48 +77,57 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 
     % Norm and condition number estimation
     Acond = max(svals) / min(svals);
-    Anorm = max(svals);
+    Anorm = max(svals); 
     Afronorm = norm(A,'fro');
     bnorm = norm(b);
+
+    if Acond > 1/eps/30
+        reg = 10 * Afronorm * eps;
+        sreg = sqrt(svals.^2 + reg^2);
+    else
+        reg = 0;
+        sreg = svals;
+    end
 
     if ~isempty(summary); stats(end+1,:) = summary(x); end
     num_iters = 0;
 
     for loop = 1:length(iterations)
-        c = (V'*(A'*r))./svals;
+        c = (V'*(A'*r - reg^2*x))./sreg;
         dy = c; dyold = dy;
 
         if verbose; fprintf('Beginning loop %d\n', loop); end
         for i = 1:iterations(loop)
             num_iters = num_iters + 1;
-            update = damping * (c - (V'*(A'*(A*(V*(dy./svals)))))...
-                ./svals) + momentum*(dy-dyold);
+            z = V*(dy./sreg);
+            update = damping * (c - (V'*(A'*(A*z) + reg^2 * z))...
+                ./sreg) + momentum*(dy-dyold);
             dyold = dy;
             dy = dy + update;
             if ~isempty(summary)
-                stats(end+1,:) = summary(x + V*(dy./svals));
+                stats(end+1,:) = summary(x + V*(dy./sreg));
             end
             if verbose
-                xhat = x + V*(dy./svals);
+                xhat = x + V*(dy./sreg);
                 rhat = b - A*xhat;
-                be = posterior_estimate(A,xhat,rhat,V,svals);
+                be = posterior_estimate(A,xhat,rhat,V,svals,Afronorm,bnorm);
                 fprintf('Iteration %d\t%e\t%e\n', i, norm(update), be);
             end
             if adaptive && loop == 1 && norm(update) ...
                     <= 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps
                 break
             elseif adaptive && loop == 2 && mod(i,5) == 0
-                xhat = x + V*(dy./svals);
+                xhat = x + V*(dy./sreg);
                 rhat = b - A*xhat;
-                be = posterior_estimate(A,xhat,rhat,V,svals);
-                if be <= (Afronorm + bnorm) * eps; break; end
+                be = posterior_estimate(A,xhat,rhat,V,svals,Afronorm,bnorm);
+                if be <= Afronorm * eps/2; break; end
             end
         end
-        x = x + V*(dy./svals);
+        x = x + V*(dy./sreg);
         r = b - A*x;
         if adaptive
-            be = posterior_estimate(A,x,r,V,svals);
-            if be <= (Afronorm + bnorm) * eps; break; end
+            be = posterior_estimate(A,x,r,V,svals,Afronorm,bnorm);
+            if be <= Afronorm * eps/2; break; end
             if loop == 2
                 warning('Exiting without backward stability!')
             end
@@ -126,8 +135,10 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
     end
 end
 
-function be = posterior_estimate(A,x,r,V,svals)
+function be = posterior_estimate(A,x,r,V,svals,Afronorm,bnorm)
+theta = Afronorm / bnorm;
 xnorm = norm(x);
 be = norm((V'*(A'*r)) ./ (svals.^2 ...
-    + norm(r)^2/xnorm^2).^0.5) / xnorm;
+    + theta^2*norm(r)^2/(1+theta^2*xnorm^2)).^0.5) ...
+    * (theta / sqrt(1+theta^2*xnorm^2));
 end
