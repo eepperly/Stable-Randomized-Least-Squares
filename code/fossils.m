@@ -1,4 +1,4 @@
-function [x,stats,num_iters] = fossils(A,b,varargin)
+function [x,stats,num_iters] = fossils_op(A,b,varargin)
 %FOSSILS Solve A*x = b in the least-squares sense using FOSSILS
 %   Optional parameters (use [] for default value):
 %   - d: sketching dimension (default 12*size(A,2))
@@ -12,8 +12,16 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 %   - verbose: if true, print at each iteration. (default false)
 %   - reproducible: if true, use slower, reproducible implementation of
 %     sparse sign embeddings (default false)
-    m = size(A,1);
-    n = size(A,2);
+    Anum = isnumeric(A);
+    if Anum
+        m = size(A,1);
+        n = size(A,2);
+        Afun = @(x,op) mul(A,x,op);
+    else
+        m = size(b,1);
+        n = size(A(b, true),1);
+        Afun = A;
+    end
 
     if length(varargin) >= 1 && ~isempty(varargin{1})
         d = varargin{1};
@@ -66,10 +74,14 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 
     stats = [];
 
-    SA = full(S*A);
+    if Anum
+        SA = full(S*A);
+    else
+        SA = full(Afun(A',true)');
+    end
     [U,svals,V] = svd(SA,'econ'); svals = diag(svals);
     x = V*((U'*(S*b)) ./ svals);
-    r = b - A*x;
+    r = b - Afun(x,false);
 
     % Chebyshev interpolation
     momentum = n/d;
@@ -78,7 +90,11 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
     % Norm and condition number estimation
     Acond = max(svals) / min(svals);
     Anorm = max(svals); 
-    Afronorm = norm(A,'fro');
+    if Anum
+        Afronorm = norm(A,'fro');
+    else
+        Afronorm = norm(svals);
+    end
     bnorm = norm(b);
 
     if Acond > 1/eps/30
@@ -93,15 +109,15 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
     num_iters = 0;
 
     for loop = 1:length(iterations)
-        c = (V'*(A'*r - reg^2*x))./sreg;
+        c = (V'*(Afun(r,true) - reg^2*x))./sreg;
         dy = c; dyold = dy;
 
         if verbose; fprintf('Beginning loop %d\n', loop); end
         for i = 1:iterations(loop)
             num_iters = num_iters + 1;
             z = V*(dy./sreg);
-            update = damping * (c - (V'*(A'*(A*z) + reg^2 * z))...
-                ./sreg) + momentum*(dy-dyold);
+            update = damping * (c - (V'*(Afun(Afun(z,false),true)...
+                + reg^2 * z)) ./sreg) + momentum*(dy-dyold);
             dyold = dy;
             dy = dy + update;
             if ~isempty(summary)
@@ -109,8 +125,8 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
             end
             if verbose
                 xhat = x + V*(dy./sreg);
-                rhat = b - A*xhat;
-                be = posterior_estimate(A,xhat,rhat,V,svals,Afronorm,bnorm);
+                rhat = b - Afun(xhat,false);
+                be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 fprintf('Iteration %d\t%e\t%e\n', i, norm(update), be);
             end
             if adaptive && loop == 1 && norm(update) ...
@@ -119,14 +135,14 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
             elseif adaptive && loop == 2 && mod(i,5) == 0
                 xhat = x + V*(dy./sreg);
                 rhat = b - A*xhat;
-                be = posterior_estimate(A,xhat,rhat,V,svals,Afronorm,bnorm);
+                be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 if be <= Afronorm * eps/2; break; end
             end
         end
         x = x + V*(dy./sreg);
-        r = b - A*x;
+        r = b - Afun(x,false);
         if adaptive
-            be = posterior_estimate(A,x,r,V,svals,Afronorm,bnorm);
+            be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm);
             if be <= Afronorm * eps/2; break; end
             if loop == 2
                 warning('Exiting without backward stability!')
@@ -135,10 +151,18 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
     end
 end
 
-function be = posterior_estimate(A,x,r,V,svals,Afronorm,bnorm)
+function be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm)
 theta = Afronorm / bnorm;
 xnorm = norm(x);
-be = norm((V'*(A'*r)) ./ (svals.^2 ...
+be = norm((V'*Afun(r,true)) ./ (svals.^2 ...
     + theta^2*norm(r)^2/(1+theta^2*xnorm^2)).^0.5) ...
     * (theta / sqrt(1+theta^2*xnorm^2));
+end
+
+function b = mul(A, x, op)
+    if op
+        b = A'*x;
+    else
+        b = A*x;
+    end
 end
