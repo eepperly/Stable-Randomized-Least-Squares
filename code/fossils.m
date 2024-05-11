@@ -1,4 +1,4 @@
-function [x,stats,num_iters] = fossils_op(A,b,varargin)
+function [x,stats,num_iters] = fossils(A,b,varargin)
 %FOSSILS Solve A*x = b in the least-squares sense using FOSSILS
 %   Optional parameters (use [] for default value):
 %   - d: sketching dimension (default 12*size(A,2))
@@ -19,7 +19,7 @@ function [x,stats,num_iters] = fossils_op(A,b,varargin)
         Afun = @(x,op) mul(A,x,op);
     else
         m = size(b,1);
-        n = size(A(b, true),1);
+        n = size(A(zeros(size(b,1),0), true),1);
         Afun = A;
     end
 
@@ -77,7 +77,7 @@ function [x,stats,num_iters] = fossils_op(A,b,varargin)
     if Anum
         SA = full(S*A);
     else
-        SA = full(Afun(A',true)');
+        SA = full(Afun(S',true)');
     end
     [U,svals,V] = svd(SA,'econ'); svals = diag(svals);
     x = V*((U'*(S*b)) ./ svals);
@@ -90,11 +90,7 @@ function [x,stats,num_iters] = fossils_op(A,b,varargin)
     % Norm and condition number estimation
     Acond = max(svals) / min(svals);
     Anorm = max(svals); 
-    if Anum
-        Afronorm = norm(A,'fro');
-    else
-        Afronorm = norm(svals);
-    end
+    Afronorm = norm(svals);
     bnorm = norm(b);
 
     if Acond > 1/eps/30
@@ -134,7 +130,7 @@ function [x,stats,num_iters] = fossils_op(A,b,varargin)
                 break
             elseif adaptive && loop == 2 && mod(i,5) == 0
                 xhat = x + V*(dy./sreg);
-                rhat = b - A*xhat;
+                rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 if be <= Afronorm * eps/2; break; end
             end
