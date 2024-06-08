@@ -76,10 +76,10 @@ The first step of the algorithm is to collect a sketch $SA$ of the matrix $A$ an
 The core engine for FOSSILS is the following _outer solver_: On input $A,b$,
 
 1. Compute $c = R^{-\top} (A^\top b)$.
-2. Solve the equation $(R^{-\top} A^\top A R^{-1}) y = c$.
+2. Solve the equation $(R^{-\top} A^\top A R^{-1}) y = c$ using the Polyak heavy ball method.
 3. Output $x = R^{-1}y$.
 
-On it's own the FOSSILS outer solver is _not_ backward stable, but it can be upgraded to backward stability by using _iterative refinement_.
+On it's own, the FOSSILS outer solver is _not_ backward stable, but it can be upgraded to backward stability by using _iterative refinement_.
 
 1. Set $x_0 = R^{-1} (Q^\top (Sb))$. This is the "sketch and solve" initialization.
 2. Update $x_1 = x_0 + \mathrm{FossilsOuterSolver}(b-Ax_0)$.
@@ -87,13 +87,49 @@ On it's own the FOSSILS outer solver is _not_ backward stable, but it can be upg
 
 This simple two-step refinement procedure leads to a backward stable algorithm.
 
+To run FOSSILS using our code, the command is
+
+```
+[x, stats] = fossils(A, b, [d, iterations, summary, verbose, reproducible])
+```
+
+All but the first two inputs are optional.
+The optional inputs are as follows:
+
+- `d`: sketching dimension. (_Default value_: `12*size(A,2)`)
+- `iterations`: number of iterations for each refinement step (i.e., `[50,50]` to set fifty steps for each refinement step). Set to `'adaptive'` to automatically set the number of refinement steps. (_Default value_: `'adaptive'`)
+- `summary`: a function of `x` to be recorded at every iteration. The results will be outputted in the optional output argument `stats`. (_Default value_: None)
+- `verbose`: if true, output at every iteration. (_Default value_: `false`)
+- `reproducible`: if true, use a slow, but reproducible implementation of sparse sign embeddings. (_Default value_: `false`)
+
+Inputting a value of `[]` for an optional argument results in the default value.
+
 ### Sketch-and-precondition with iterative refinement
 
+Sketch-and-precondition with iterative refinement (SPIR) is a fast, backward stable randomized least-squares solver.
+It is similar to FOSSILS, except that it uses a Krylov method in place of the Polyak heavy ball method.
 
+To run SPIR using our code, the command is
+
+```
+[x, stats] = spir(A, b, [d, q, summary, verbose, opts, reproducible])
+```
+
+All but the first two inputs are optional.
+The optional inputs are as follows:
+
+- `d`: sketching dimension. (_Default value_: `2*size(A,2)`)
+- `q`: number of iterations for each refinement step. (_Default value_: `[50,50]`)
+- `summary`: a function of `x` to be recorded at every iteration. The results will be outputted in the optional output argument `stats`. (_Default value_: None)
+- `verbose`: if true, output at every iteration. (_Default value_: `false`)
+- `opts`: specifies the initial iterate $x_0$ and iterative method (LSQR, symmetric conjugate gradient, or preconditioned conjugate gradient). If `'cold'` is a substring of `opts`, then the initial iterate is chosen to be $x_0 = 0$. Otherwise, we use a warm start and choose $x_0$ to be the [sketch-and-solve solution](https://ar5iv.labs.arxiv.org/html/2002.01387#S10.SS3). If `cgne` is a substring of `opts`, then we solve $Ax = b$ using CGNE, and if `sym` is a substring of `opts`, then we perform conjugate gradient on the symmetrically preconditioned system $(R^{-\top} A^\top A R^{-1}) y = c$; otherwise, we use LSQR. We recommend using the LSQR or symmetric conjugate gradient implementations in practice. (_Default value_: `''`)
+- `reproducible`: if true, use a slow, but reproducible implementation of sparse sign embeddings. (_Default value_: `false`)
+
+Inputting a value of `[]` for an optional argument results in the default value.
 
 ### Iterative sketching
 
-_Iterative sketching_ is a randomized iterative method for solving $Ax = b$ in the least-squares sense.
+_Iterative sketching_ is a fast, forward stable randomized least-squares solver.
 As with FOSSILS, begin by sketching and QR-factorizing $SA = QR$.
 We use a sparse sign embedding for the embedding matrix $S$.
 After which, iterative sketching produces a sequence of better-and-better least-squares solutions using the iteration
@@ -116,7 +152,7 @@ The optimal damping and momentum parameters were computed in [these](https://web
 To run iterative sketching using our code, the command is
 
 ```
-[x, stats] = iterative_sketching(A, b, [d, q, summary, verbose, damping, momentum])
+[x, stats] = iterative_sketching(A, b, [d, q, summary, verbose, damping, momentum, reproducible])
 ```
 
 All but the first two inputs are optional.
@@ -139,7 +175,7 @@ It then uses $R$ as a preconditioner for solving $Ax = b$ using the [LSQR](https
 To call sketch-and-precondition, use the following command
 
 ```
-[x, stats] = sketch_and_precondition(A, b, [d, q, summary, verbose, opts])
+[x, stats] = sketch_and_precondition(A, b, [d, q, summary, verbose, opts, reproducible])
 ```
 
 All but the first two inputs are optional.
@@ -149,7 +185,42 @@ The optional inputs are as follows:
 - `q`: number of iterations. (_Default value_: `100`)
 - `summary`: a function of `x` to be recorded at every iteration. The results will be outputted in the optional output argument `stats`. (_Default value_: None)
 - `verbose`: if true, output at every iteration. (_Default value_: `false`)
-- `opts`: specifies the initial iterate $x_0$ and iterative method (LSQR or CGNE). If `'cold'` is a substring of `opts`, then the initial iterate is chosen to be $x_0 = 0$. Otherwise, we use a warm start and choose $x_0$ to be the [sketch-and-solve solution](https://ar5iv.labs.arxiv.org/html/2002.01387#S10.SS3). If `cgne` is a substring of `opts`, then we solve $Ax = b$ using CGNE; otherwise, we use LSQR. (_Default value_: `''`)
+- `opts`: specifies the initial iterate $x_0$ and iterative method (LSQR, symmetric conjugate gradient, or preconditioned conjugate gradient). If `'cold'` is a substring of `opts`, then the initial iterate is chosen to be $x_0 = 0$. Otherwise, we use a warm start and choose $x_0$ to be the [sketch-and-solve solution](https://ar5iv.labs.arxiv.org/html/2002.01387#S10.SS3). If `cgne` is a substring of `opts`, then we solve $Ax = b$ using CGNE, and if `sym` is a substring of `opts`, then we perform conjugate gradient on the symmetrically preconditioned system $(R^{-\top} A^\top A R^{-1}) y = c$; otherwise, we use LSQR. We recommend using the LSQR or symmetric conjugate gradient implementations in practice. (_Default value_: `''`)
 - `reproducible`: if true, use a slow, but reproducible implementation of sparse sign embeddings. (_Default value_: `false`)
 
 Inputting a value of `[]` for an optional argument results in the default value.
+
+### Computing or estimating the backward error
+
+Our code also provides functions to compute or estimate the backward error, defined to be $$\mathrm{BE}_\theta(\hat{x}) = \min \left\\{ \lVert [\Delta A,\theta\cdot\Delta b]\rVert_F : \hat{x} = \mathrm{argmin}_y \lVert (b+\Delta b) - (A+\Delta A)y \rVert \right\\}.$$The backward error is a quantitative measure of the size of the perturbations to $A$ and $b$ needed to make the numerically computed solution $\hat{x}$ the exact solution to the least-squares problem. The parameter $\theta \in [0,\infty]$ sets the relative importances of perturbations to $A$ and $b$. If $\lVert A \rVert = \lVert b \rVert = 1$, a method is backward stable if and only if $\mathrm{BE}_1(\hat{x})$ is at most a small multiple of the machine precision ($\approx 10^{-16}$ in double precision).
+See [this section of our paper](https://arxiv.org/html/2406.03468v1#S3.SS3) for details on the backward error and descriptions of the methods below for estimating it.
+
+The backward error can be computed in $O(m^3)$ operations using the Waldén–Karlson–Sun–Higham formula. 
+In our code,
+
+```
+backward_error_ls(A,b,xhat,[theta])
+```
+
+The default value of `theta` is infinity (`Inf`).
+
+To obtain a cheaper estimate of the backward error, one can use the Karlson–Waldén estimate, which is guaranteed to be within a factor of $\sqrt{2}$ of the true backward error (neglecting rounding errors incurred in evaluating the formulas). 
+The Karlson–Waldén estimate can be called in our code using the command
+
+```
+kw_estimate(A,b,xhat,[theta,S,V])
+```
+
+The default value of `theta` is infinity (`Inf`).
+The Karlson–Waldén estimate runs in $O(mn^2)$ operations.
+If one has access to an SVD of `A` (i.e., `[U,S,V] = svd(A,"econ")`), then the `S` and `V` matrices can be provided to `kw_estimate` as optional arguments, reducing the runtime to $O(mn)$.
+
+Finally, for an even faster estimate of the backward error, one can use the _sketched_ Karlson–Waldén estimate.
+The sketched Karlson–Waldén estimate is also within a small constant factor of the true backward error, and runs in a faster (roughly) $O(mn + n^3)$ operations.
+The sketched Karlson–Waldén estimate can be called as
+
+```
+kw_estimate(A,b,xhat,theta,"sketched",[d])
+```
+
+The parameter `d` sets the embedding dimension for the sketch, defaulting to `2*size(A,2)`.
