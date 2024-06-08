@@ -71,7 +71,21 @@ S = sparsesign(d, m, zeta);
 
 ### FOSSILS
 
+_FOSSILS_ (**F**ast **O**ptimal **S**table **S**ketchy **I**terative **L**east **S**quares) is a backward stable randomized least-squares solver with a fast roughly $O(mn + n^3)$ runtime.
+The first step of the algorithm is to collect a sketch $SA$ of the matrix $A$ and compute its [QR factorization](https://en.m.wikipedia.org/wiki/QR_decomposition) $SA = QR$.
+The core engine for FOSSILS is the following _outer solver_: On input $A,b$,
 
+1. Compute $c = R^{-\top} (A^\top b)$.
+2. Solve the equation $(R^{-\top} A^\top A R^{-1}) y = c$.
+3. Output $x = R^{-1}y$.
+
+On it's own the FOSSILS outer solver is _not_ backward stable, but it can be upgraded to backward stability by using _iterative refinement_.
+
+1. Set $x_0 = R^{-1} (Q^\top (Sb))$. This is the "sketch and solve" initialization.
+2. Update $x_1 = x_0 + \mathrm{FossilsOuterSolver}(b-Ax_0)$.
+3. Output $x_2 = x_1 + \mathrm{FossilsOuterSolver}(b-Ax_1)$.
+
+This simple two-step refinement procedure leads to a backward stable algorithm.
 
 ### Sketch-and-precondition with iterative refinement
 
@@ -80,7 +94,7 @@ S = sparsesign(d, m, zeta);
 ### Iterative sketching
 
 _Iterative sketching_ is a randomized iterative method for solving $Ax = b$ in the least-squares sense.
-The first step of the algorithm is to collect a sketch $SA$ of the matrix $A$ and compute its [QR factorization](https://en.m.wikipedia.org/wiki/QR_decomposition) $SA = QR$.
+As with FOSSILS, begin by sketching and QR-factorizing $SA = QR$.
 We use a sparse sign embedding for the embedding matrix $S$.
 After which, iterative sketching produces a sequence of better-and-better least-squares solutions using the iteration
 
