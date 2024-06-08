@@ -14,10 +14,13 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 %     sparse sign embeddings (default false)
     Anum = isnumeric(A);
     if Anum
+        scale = vecnorm(A);
+        A = A ./ scale;
         m = size(A,1);
         n = size(A,2);
         Afun = @(x,op) mul(A,x,op);
     else
+        scale = 1;
         m = size(b,1);
         n = size(A(zeros(size(b,1),0), true),1);
         Afun = A;
@@ -101,6 +104,8 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
         sreg = svals;
     end
 
+    betol = Afronorm * eps; % Backward error tolerance
+
     if ~isempty(summary); stats(end+1,:) = summary(x); end
     num_iters = 0;
 
@@ -132,19 +137,21 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
                 xhat = x + V*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
-                if be <= Afronorm * eps/2; break; end
+                if be <= betol; break; end
             end
         end
         x = x + V*(dy./sreg);
         r = b - Afun(x,false);
         if adaptive
             be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm);
-            if be <= Afronorm * eps/2; break; end
+            if be <= betol; break; end
             if loop == 2
                 warning('Exiting without backward stability!')
             end
         end
     end
+
+    x = x ./ scale.';
 end
 
 function be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm)
