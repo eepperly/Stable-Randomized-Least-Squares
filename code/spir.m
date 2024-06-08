@@ -11,6 +11,8 @@ function [x,stats] = spir(A,b,varargin)
 %   - opts: specify the solver ('cgne' or 'lsqr') and whether to use a
 %     'warm' start (initial iterate given by sketch-and-solve) or a 'cold'
 %     start (initial iterate zero). Defaults to 'lsqrwarm'
+%   - reproducible: if true, use a slow, but reproducible implementation
+%     of sparse sign embeddings. Defaults to false
 
     m = size(A,1);
     n = size(A,2);
@@ -98,7 +100,7 @@ function [x,stats] = spir(A,b,varargin)
             if q_idx == 1
                 stats = newstats;
             else
-                stats = [stats;newstats(2:end,:)];
+                stats = [stats;newstats(2:end,:)]; %#ok<AGROW>
             end
         end
     end
