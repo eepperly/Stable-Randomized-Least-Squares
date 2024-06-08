@@ -1,18 +1,51 @@
-# Fast and forward stable randomized algorithms for linear least-squares problems
+# Stable randomized least-squares
 
 [![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=eepperly/Randomized-Least-Squares-Solvers)
 
-This repository contains code for the paper [_Fast and forward stable randomized algorithms for linear least-squares problems_](https://arxiv.org/abs/2311.04362) by [Ethan N. Epperly](https://www.ethanepperly.com).
+This repository contains code for the paper [_Fast randomized least-squares solvers can be just as accurate and stable as classical direct solvers_](https://arxiv.org/abs/2406.03468) by [Ethan N. Epperly](https://www.ethanepperly.com), [Maike Meier](https://www.maths.ox.ac.uk/people/maike.meier), and [Yuji Nakatsukasa](https://people.maths.ox.ac.uk/nakatsukasa/). It also contains code for the earlier paper [_Fast and forward stable randomized algorithms for linear least-squares problems_](https://arxiv.org/abs/2311.04362) by [Ethan N. Epperly](https://www.ethanepperly.com); see also [that paper's repo](https://github.com/eepperly/Iterative-Sketching-Is-Stable).
 
-## Experiments 
+## Background: Fast, randomized least-squares methods
 
-Code to reproduce the numerical experiments from the paper are found in `experiments/`. 
+The overdetermined linear least-squares problem $$x = \text{argmin}_{x \in \mathbb{R}^n} \lVert b - Ax\rVert_2$$ is one of the most fundamental problem in machine learning, statistics, and computational mathematics.
+To solve least-squares problems accurately, the standard approach is to use [QR factorization](https://en.wikipedia.org/wiki/QR_decomposition); QR-based least-squares solvers require $O(mn^2)$ operations for an $m\times n$ matrix $A$.
 
-- Figure 1 (`experiments/test_iterative_sketching.m`): Computes the forward, residual, and backward errors for iterative sketching for different condition numbers and residual norms.
-- Figure 2 (`experiments/test_variants.m`): Compares the performance iterative sketching (including versions with damping and momentum) to sketch-and-precondition (with both the zero and sketch-and-solve initializations).
-- Figure 3 (`experiments/test_bad_iterative_sketching.m`): Compare the stable implementation of iterative sketching (in `code/iterative_sketching.m`) to three "bad" implementations.
-- Figure 4 (`experiments/test_timing.m`): Compares the runtime of iterative sketching (including versions with damping and momentum) to MATLAB's `mldivide` on a simplified kernel regression task.
-- Figure 5 (`experiments/test_sparse.m`): Compares the runtime of iterative sketching to MATLAB's `mldivide` for solving random sparse least-squares problems with three nonzeros per row.
+In 2008, Rokhlin and Tygert [introduced](https://www.pnas.org/doi/abs/10.1073/pnas.0804869105) the _sketch-and-precondition method_, a faster least-squares solver that uses _randomized dimensionality reduction_ to _precondition_ an iterative least-squares algorithm.
+Sketch-and-precondition solves a least-squares problem in roughly $O(mn + n^3)$ operations, a significant speedup over QR for highly overdetermined least-squares problems $m\gg n\gg 1$.
+Another class of randomized least-squares solvers, known as _iterative sketching methods_ (introduced by [Pilanci and Wainwright, 2016](https://www.jmlr.org/papers/v17/14-460.html)), achieve the same $O(mn + n^3)$ operation count as sketch-and-precondition and can have benefits in some situations (e.g., for parallel computing).
+
+Until recently, the _numerical stability_ of randomized least-squares solvers was poorly understood.
+How do these algorithms perform when the matrix $A$ is stored on a computer using double-, single-, or even half-precision [floating point numbers](https://en.wikipedia.org/wiki/Floating-point_arithmetic)?
+The gold standard stability property for numerical algorithms is [_backward stability_](https://nhigham.com/2020/08/04/what-is-numerical-stability/), a property possessed by the classical QR method for least-squares.
+Unfortunately, both sketch-and-precondition and iterative sketching [are not backward stable](https://arxiv.org/abs/2302.07202), though good implementations satisfy a weaker stability property known as forward stability.
+Forward stability is enough for many applications, but—to truly use randomized least-squares solvers as a drop-in replacement for the QR method—it is desirable to have a fast randomized least-squares solver that is backward stable.
+
+The paper [_Fast randomized least-squares solvers can be just as accurate and stable as classical direct solvers_](https://arxiv.org/abs/2406.03468) introduces two fast, backward stable randomized least-squares solvers:
+
+- FOSSILS, a backward stable version of iterative sketching
+- Sketch-and-precondition with iterative refinement (SPIR), a backward stable version of sketch-and-precondition
+
+These methods are modified versions of iterative sketching and sketch-and-precondition that perform one step of iterative refinement. Fortunately, this one refinement step is enough to obtain backward stable algorithms.
+
+## Code to replicate experiments from [_Fast randomized least-squares solvers can be just as accurate and stable as classical direct solvers_](https://arxiv.org/abs/2406.03468)
+
+Code to reproduce the numerical experiments from this paper are found in `paper2_experiments/`. 
+
+- Figure 1 (`paper2_experiments/test_comparison.m`): Computes forward and backward errors for different randomized least-squares solvers during the course of iteration.
+- Table 1: (`paper2_experiments/test_residual_orthogonality.m`): Tests the value of $\lVert A^\top (b-Ax)\rVert` for different forward and backward stable least-squares solvers.
+- Figure 2 (`paper2_experiments/test_comparison_2.m`): Computes the final forward and backward errors for different randomized least-squares solvers for problems of increasing difficulty.
+- Figure 4 (`paper2_experiments/test_kernel.m` and `paper2_experiments/test_prony.m`): Compares the runtime of FOSSILS, iterative sketching with momentum, and MATLAB's `mldivide` on a kernel regression problem and an application of Prony's method to quantum eigenvalue estimation.
+- Table 2: (`paper2_experiments/test_sparse.m`): Compares FOSSILS to `mldivide` for sparse least-squares problems from the [SuiteSparse matrix collection](https://sparse.tamu.edu).
+- Figure 6: (`paper2_experiments/test_spir.m`): Numerical evaluation of the sketch-and-precondition with iterative refinement (SPIR) method.
+
+## Code to replicate experiments from [_Fast and forward stable randomized algorithms for linear least-squares problems_](https://arxiv.org/abs/2311.04362)
+
+Code to reproduce the numerical experiments from this paper are found in `paper1_experiments/`. 
+
+- Figure 1 (`paper1_experiments/test_iterative_sketching.m`): Computes the forward, residual, and backward errors for iterative sketching for different condition numbers and residual norms.
+- Figure 2 (`paper1_experiments/test_variants.m`): Compares the performance iterative sketching (including versions with damping and momentum) to sketch-and-precondition (with both the zero and sketch-and-solve initializations).
+- Figure 3 (`paper1_experiments/test_bad_iterative_sketching.m`): Compare the stable implementation of iterative sketching (in `code/iterative_sketching.m`) to three "bad" implementations.
+- Figure 4 (`paper1_experiments/test_timing.m`): Compares the runtime of iterative sketching (including versions with damping and momentum) to MATLAB's `mldivide` on a simplified kernel regression task.
+- Figure 5 (`paper1_experiments/test_sparse.m`): Compares the runtime of iterative sketching to MATLAB's `mldivide` for solving random sparse least-squares problems with three nonzeros per row.
 
 ## Randomized least-squares solvers
 
@@ -21,8 +54,8 @@ Code for these methods is found in the `code/` directory.
 
 ### Sparse sign embeddings
 
-The core ingredient for both iterative sketching and sketch-and-precondition is a [_fast random embedding_](https://ar5iv.labs.arxiv.org/html/2002.01387#S9).
-Based on the empirical comparison in [this paper (see Fig. 2)](https://arxiv.org/abs/2104.05877) and our own testing, our preferred embedding is the [_sparse sign embedding_](https://ar5iv.labs.arxiv.org/html/2002.01387#S9.SS2).
+The core ingredient for randomized least-squares solvers is a [_fast random embedding_](https://ar5iv.labs.arxiv.org/html/2002.01387#S9).
+Based on the empirical comparison in [this paper (see Fig. 2)](https://arxiv.org/abs/2104.05877) and our [own testing](https://www.ethanepperly.com/index.php/2023/11/27/which-sketch-should-i-use/), our preferred embedding is the [_sparse sign embedding_](https://ar5iv.labs.arxiv.org/html/2002.01387#S9.SS2).
 
 To generate a sparse sign embedding in our code, first build the [mex file](https://www.mathworks.com/help/matlab/ref/mex.html) using the following command:
 
@@ -36,6 +69,14 @@ Then, to generate a `d` by `m` sparse sign embedding with `zeta` nonzeros per co
 S = sparsesign(d, m, zeta);
 ```
 
+### FOSSILS
+
+
+
+### Sketch-and-precondition with iterative refinement
+
+
+
 ### Iterative sketching
 
 _Iterative sketching_ is a randomized iterative method for solving $Ax = b$ in the least-squares sense.
@@ -47,7 +88,7 @@ $$
 x_{i+1} = x_i + R^{-1} ( R^{-\top} (A^\top(b - Ax_i))).
 $$
 
-The main result of [my paper](https://arxiv.org/abs/2311.04362) is that iterative sketching is [(forward) stable](https://nhigham.com/2020/08/04/what-is-numerical-stability/): If you run it for sufficiently many iterations, the (forward) error $\lVert x - x_i \rVert$ and residual error $\lVert (b-Ax) - (b-Ax_i) \rVert$ are roughly as small as for a standard direct method like (Householder) QR factorization.
+The main result of [_Fast and forward stable randomized algorithms for linear least-squares problems_](https://arxiv.org/abs/2311.04362) is that iterative sketching is [forward stable](https://nhigham.com/2020/08/04/what-is-numerical-stability/): If you run it for sufficiently many iterations, the forward error $\lVert x - x_i \rVert$ and residual error $\lVert (b-Ax) - (b-Ax_i) \rVert$ are roughly as small as for a standard direct method like (Householder) QR factorization.
 
 Iterative sketching can optionally be accelerated by incorporating _damping_ and _momentum_, resulting in a modified iteration
 
@@ -78,8 +119,6 @@ The optional inputs are as follows:
 Inputting a value of `[]` for an optional argument results in the default value.
 
 ### Sketch-and-precondition
-
-While it is not the main focus of our paper, we also provide an implementation of the sketch-and-precondition method.
 
 Sketch-and-precondition is also based on a QR factorization $SA = QR$ of a sketch of the matrix $A$.
 It then uses $R$ as a preconditioner for solving $Ax = b$ using the [LSQR](https://stanford.edu/group/SOL/software/lsqr/lsqr-toms82a.pdf) or [CGNE](https://en.wikipedia.org/wiki/Conjugate_gradient_method#Conjugate_gradient_on_the_normal_equations) method.
