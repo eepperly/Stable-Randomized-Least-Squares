@@ -33,6 +33,7 @@ Code to reproduce the numerical experiments from this paper are found in `paper2
 - Figure 1 (`paper2_experiments/test_comparison.m`): Computes forward and backward errors for different randomized least-squares solvers during the course of iteration.
 - Table 1: (`paper2_experiments/test_residual_orthogonality.m`): Tests the value of $\lVert A^\top (b-Ax)\rVert` for different forward and backward stable least-squares solvers.
 - Figure 2 (`paper2_experiments/test_comparison_2.m`): Computes the final forward and backward errors for different randomized least-squares solvers for problems of increasing difficulty.
+- Figures 3 and 5 (`paper2_experiments/test_cond_res.m` and `paper2_experiments/test_sizes.m`): Compares the backward error and iteration counts for FOSSILS for least-squares problems of different sizes, conditioning, and residual norm.
 - Figure 4 (`paper2_experiments/test_kernel.m` and `paper2_experiments/test_prony.m`): Compares the runtime of FOSSILS, iterative sketching with momentum, and MATLAB's `mldivide` on a kernel regression problem and an application of Prony's method to quantum eigenvalue estimation.
 - Table 2: (`paper2_experiments/test_sparse.m`): Compares FOSSILS to `mldivide` for sparse least-squares problems from the [SuiteSparse matrix collection](https://sparse.tamu.edu).
 - Figure 6: (`paper2_experiments/test_spir.m`): Numerical evaluation of the sketch-and-precondition with iterative refinement (SPIR) method.
