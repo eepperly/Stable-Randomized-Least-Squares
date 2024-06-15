@@ -2,10 +2,14 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 %FOSSILS Solve A*x = b in the least-squares sense using FOSSILS
 %   Optional parameters (use [] for default value):
 %   - d: sketching dimension (default 12*size(A,2))
-%   - iterations: vector of integers. iterations(i) contains the number of
-%     steps to be taken on the i-th refinement step. Or set to 'adaptive'
-%     to automatically determine the number of refinement steps needed to
-%     achieve backward stability. (default 'adaptive')
+%   - iterations: can be set in three ways
+%        * if iterations is a vector of integers, iterations(i) contains
+%          the number of steps to be taken on the i-th refinement step.
+%        * if iterations is a non-integer, iterations sets the tolerance
+%          for the backward error and the number of steps is determined
+%          adaptively
+%        * if iterations is 'adaptive', the number of steps is determined
+%          adaptively with the default tolerance (default 'adaptive')
 %   - summary: a function of the current iterate to be recorded at each
 %     iteration. All summary values will be rows of stats, the second
 %     output of this function.
@@ -67,10 +71,17 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
     end
 
     if ~isstring(iterations) && ~ischar(iterations)
-        adaptive = false;
+        if length(iterations) == 1 && (floor(iterations) ~= iterations)
+            betol = iterations;
+            iterations = [100,100];
+            adaptive = true;
+        else
+            adaptive = false;
+        end
     elseif strcmp(iterations, 'adaptive')
         adaptive = true;
         iterations = [100,100];
+        betol = eps;
     else
         error("Second argument should be a list of integers or 'adaptive'")
     end
@@ -104,7 +115,7 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
         sreg = svals;
     end
 
-    betol = Afronorm * eps; % Backward error tolerance
+    betol = Afronorm * betol; % Backward error tolerance
 
     if ~isempty(summary); stats(end+1,:) = summary(x); end
     num_iters = 0;
@@ -155,11 +166,11 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
 end
 
 function be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm)
-theta = Afronorm / bnorm;
-xnorm = norm(x);
-be = norm((V'*Afun(r,true)) ./ (svals.^2 ...
-    + theta^2*norm(r)^2/(1+theta^2*xnorm^2)).^0.5) ...
-    * (theta / sqrt(1+theta^2*xnorm^2));
+    theta = Afronorm / bnorm;
+    xnorm = norm(x);
+    be = norm((V'*Afun(r,true)) ./ (svals.^2 ...
+        + theta^2*norm(r)^2/(1+theta^2*xnorm^2)).^0.5) ...
+        * (theta / sqrt(1+theta^2*xnorm^2));
 end
 
 function b = mul(A, x, op)
