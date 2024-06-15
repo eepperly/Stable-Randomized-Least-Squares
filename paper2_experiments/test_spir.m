@@ -1,18 +1,23 @@
+addpath('../utils')
+addpath('../code')
+
 m = 4000;
 n = 50;
 d = 12*n;
 [A,b,x,r] = random_ls_problem(4000,50,1e12,1e-6);
 trials = 100;
+colors
 
 real_run = true;
 if real_run
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);backward_error_ls(A,b,y)/norm(A,'fro')];
 else
+    [~,S,V] = svd(A,"econ");
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);kw_estimate(A,b,y,Inf,S,V)/norm(A,'fro')];
 end
 
-[~,spir_lsqr] = spir(A,b,d,[],summary,true);
-[~,spir_cg] = spir(A,b,d,[],summary,true,'sym');
+[~,spir_lsqr] = spir(A,b,d,[],summary,'lsqr',true);
+[~,spir_cg] = spir(A,b,d,[],summary,'cg',true);
 
 [Q,R] = qr(A,'econ');
 y = R\(Q'*b);
@@ -23,12 +28,12 @@ qr_vals = summary(y);
 close all
 for j = 1:3
     figure(j)
-    semilogy(0:trials, spir_lsqr(:,j), 's-', 'LineWidth', 1, 'Color',...
-        purple, 'MarkerSize', 10, 'MarkerFaceColor', purple); hold on
-    semilogy(0:trials, spir_cg(:,j), 'v--', 'LineWidth', 1, 'Color',...
-        orange, 'MarkerSize', 10, 'MarkerFaceColor', orange); 
+    semilogy(0:(size(spir_lsqr,1)-1), spir_lsqr(:,j), 's-', 'LineWidth', 1,...
+        'Color',purple, 'MarkerSize', 10, 'MarkerFaceColor', purple);
+    hold on
+    semilogy(0:(size(spir_cg,1)-1), spir_cg(:,j), 'v--', 'LineWidth', 1,...
+        'Color', orange, 'MarkerSize', 10, 'MarkerFaceColor', orange); 
     yline(qr_vals(j),'k:', 'LineWidth', 3)
-    xline(50,'--','LineWidth',3,'Color','#222222')
     xlabel('Iteration $i$')
     if j == 1
         ylabel('Forward error $\|\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i\|/\|\mbox{\boldmath $x$}\|$')
