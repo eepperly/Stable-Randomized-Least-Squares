@@ -14,20 +14,37 @@ function [x,stats,num_iters] = spir(A,b,varargin)
 %   - summary: a function of the current iterate to be recorded at each
 %     iteration. All summary values will be rows of stats, the second
 %     output of this function.
+%   - solver: either 'cg' or 'lsqr' (default 'cg')
 %   - verbose: if true, print at each iteration. (default false)
 %   - reproducible: if true, use slower, reproducible implementation of
 %     sparse sign embeddings (default false)
 
-    [x,stats,num_iters] = metasolver(A,b,@spir_setup,...
-        @spir_iterate,varargin{:});
+    if length(varargin) >= 4
+        if ~isempty(varargin{4})
+            solver = varargin{4};
+        end
+        varargin(4) = [];
+    else
+        solver = 'cg';
+    end
+
+    if strcmp(solver, 'cg')
+        [x,stats,num_iters] = metasolver(A,b,@spir_setup,...
+            @spir_iterate,varargin{:});
+    elseif strcmp(solver,'lsqr')
+        [x,stats,num_iters] = metasolver(A,b,@spir_lsqr_setup,...
+            @spir_lsqr_iterate,varargin{:});
+    else
+        error("Solver '%s' not recognized", solver);
+    end
 end
 
-function data = spir_setup(c,dy,matvec,d) %#ok<INUSD>
-    data.r = c - matvec(dy);
+function data = spir_setup(c,dy,r,RAAR,AR,RA,d) %#ok<INUSD>
+    data.r = c - RAAR(dy);
     data.rsq = data.r' * data.r;
     data.p = data.r;
     data.dy = dy;
-    data.matvec = matvec;
+    data.matvec = RAAR;
 end
 
 function [dy,update,data] = spir_iterate(data)
@@ -41,4 +58,32 @@ function [dy,update,data] = spir_iterate(data)
     beta = new_rsq / data.rsq;
     data.rsq = new_rsq;
     data.p = data.r + beta*data.p;
+end
+
+function data = spir_lsqr_setup(c,dy,r,RAAR,AR,RA,d) %#ok<INUSD>
+    data.dy = dy;
+    b = r - AR(dy);
+    beta = norm(b); data.u = b / beta;
+    data.v = RA(data.u);
+    data.alpha = norm(data.v); data.v = data.v / data.alpha;
+    data.w = data.v;
+    data.phibar = beta; data.rhobar = data.alpha;
+    data.AR = AR; data.RA = RA;
+end
+
+function [dy,update,data] = spir_lsqr_iterate(data)
+    data.u = data.AR(data.v) - data.alpha*data.u;
+    beta = norm(data.u); data.u = data.u / beta;
+    data.v = data.RA(data.u) - beta*data.v;
+    data.alpha = norm(data.v); data.v = data.v / data.alpha;
+    rho = sqrt(data.rhobar^2 + beta^2);
+    c = data.rhobar / rho;
+    s = beta / rho;
+    theta = s * data.alpha;
+    data.rhobar = - c * data.alpha;
+    phi = c * data.phibar;
+    data.phibar = s * data.phibar;
+    update = (phi/rho) * data.w;
+    data.dy = data.dy + update; dy = data.dy;
+    data.w = data.v - (theta/rho) * data.w;
 end

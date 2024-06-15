@@ -102,8 +102,10 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     for loop = 1:length(iterations)
         c = (V'*(Afun(r,true) - reg^2*x))./sreg;
         dy = c;
-        solverdata = setup(c,dy,@(xx) matvec(xx,V,sreg,Afun,reg),d);
-
+        solverdata = setup(c,dy,[r;-reg*x],...
+            @(xx) RAAR(xx,V,sreg,Afun,reg),...
+            @(xx) AR(xx,V,sreg,Afun,reg),...
+            @(xx) RA(xx,V,sreg,Afun,reg),d);
         if verbose; fprintf('Beginning loop %d\n', loop); end
         for i = 1:iterations(loop)
             num_iters = num_iters + 1;
@@ -157,7 +159,18 @@ function b = mul(A, x, op)
     end
 end
 
-function Ady = matvec(dy,V,sreg,Afun,reg)
+function RAARdy = RAAR(dy,V,sreg,Afun,reg)
     z = V*(dy./sreg);
-    Ady = (V'*(Afun(Afun(z,false),true) + reg^2 * z)) ./ sreg;
+    RAARdy = (V'*(Afun(Afun(z,false),true) + reg^2 * z)) ./ sreg;
 end
+
+function ARdy = AR(dy,V,sreg,Afun,reg)
+    z = V*(dy./sreg);
+    ARdy = [Afun(z,false);reg*z];
+end
+
+function RAb = RA(b,V,sreg,Afun,reg)
+    z = Afun(b(1:(end-size(V,1)),:), true)+reg*b((end-size(V,1)+1):end,:);
+    RAb = (V'*z) ./sreg;
+end
+

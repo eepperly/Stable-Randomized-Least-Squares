@@ -20,11 +20,11 @@ function [x,stats,num_iters] = fossils(A,b,varargin)
         @fossils_iterate,varargin{:});
 end
 
-function data = fossils_setup(c,dy,matvec,d)
+function data = fossils_setup(c,dy,r,RAAR,AR,RA,d) %#ok<INUSD>
     data.dyold = dy;
     data.dy = dy;
     data.c = c;
-    data.matvec = matvec;
+    data.matvec = RAAR;
     data.momentum = size(c,1)/d;
     data.damping = (1-data.momentum)^2;
 end
