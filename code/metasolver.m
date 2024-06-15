@@ -96,7 +96,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
 
     betol = Afronorm * betol; % Backward error tolerance
 
-    if ~isempty(summary); stats(end+1,:) = summary(x); end
+    if ~isempty(summary); stats(end+1,:) = summary(x./scale.'); end
     num_iters = 0;
 
     for loop = 1:length(iterations)
@@ -111,7 +111,8 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
             num_iters = num_iters + 1;
             [dy,update,solverdata] = iterate(solverdata);
             if ~isempty(summary)
-                stats(end+1,:) = summary(x + V*(dy./sreg)); %#ok<AGROW>
+                stats(end+1,:) = summary((x + V*(dy./sreg)) ...
+                    ./ scale.'); %#ok<AGROW>
             end
             if verbose
                 xhat = x + V*(dy./sreg);
