@@ -22,6 +22,8 @@ function [x,stats,num_iters] = spir(A,b,varargin)
     if length(varargin) >= 4
         if ~isempty(varargin{4})
             solver = varargin{4};
+        else
+            solver = 'cg';
         end
         varargin(4) = [];
     else
