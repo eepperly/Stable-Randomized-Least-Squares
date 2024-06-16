@@ -8,6 +8,7 @@ d = 12*n;
 [A,b,x,r] = random_ls_problem(4000,50,1e12,1e-6);
 colors
 trials = 25;
+lastiter = 25;
 
 real_run = true;
 if real_run
@@ -38,7 +39,7 @@ spir_cg_lower = [];
 foss = [];
 foss_upper = [];
 foss_lower = [];
-for i = 1:26
+for i = 1:(lastiter+1)
     lsqrstuff = lsqr_runs(i,:,:);
     badinds = [];
     for trial = 1:trials
