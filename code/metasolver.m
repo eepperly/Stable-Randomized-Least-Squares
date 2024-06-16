@@ -53,18 +53,25 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
         S = sparse_sign_backup(d,m,8);
     end
 
+    betol = eps;
     if ~isstring(iterations) && ~ischar(iterations)
         if length(iterations) == 1 && (floor(iterations) ~= iterations)
             betol = iterations;
             iterations = [100,100];
-            adaptive = true;
+            adaptive_switching = true;
+            adaptive_stopping = true;
         else
-            adaptive = false;
+            adaptive_switching = false;
+            adaptive_stopping = false;
         end
+    elseif strcmp(iterations, 'halfadaptive')
+        adaptive_switching = true;
+        adaptive_stopping = false;
+        iterations = [100,30];
     elseif strcmp(iterations, 'adaptive')
-        adaptive = true;
+        adaptive_switching = true;
+        adaptive_stopping = true;
         iterations = [100,100];
-        betol = eps;
     else
         error("Second argument should be a list of integers or 'adaptive'")
     end
@@ -120,10 +127,10 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 fprintf('Iteration %d\t%e\t%e\n', i, norm(update), be);
             end
-            if adaptive && loop == 1 && norm(update) ...
+            if adaptive_switching && loop == 1 && norm(update) ...
                     <= (Anorm*norm(x) + 0.04*Acond*norm(r))*eps
                 break
-            elseif adaptive && loop == 2 && mod(i,5) == 0
+            elseif adaptive_stopping && loop == 2 && mod(i,5) == 0
                 xhat = x + V*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
@@ -132,7 +139,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
         end
         x = x + V*(dy./sreg);
         r = b - Afun(x,false);
-        if adaptive
+        if adaptive_stopping
             be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm);
             if be <= betol; break; end
             if loop == 2
