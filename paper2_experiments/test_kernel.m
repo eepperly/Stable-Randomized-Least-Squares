@@ -9,7 +9,7 @@ bandwidth = 4;
 S = randsample(1e6,1e3);
 A = exp(-pdist2(X,X(S,:),"euclidean").^2 / (2*bandwidth^2));
 
-sizes = round(logspace(1,3,11));
+sizes = round(logspace(log10(50),3,11));
 
 real_run = true;
 
@@ -18,6 +18,7 @@ real_run = true;
 dir = zeros(length(sizes), 1);
 moms = zeros(length(sizes), 1);
 foss = zeros(length(sizes), 1);
+spirs = zeros(length(sizes), 1);
 
 for i = 1:11
     sizes(i)
@@ -32,6 +33,11 @@ for i = 1:11
     moms(i) = toc;
     moms(i)
 
+    % SPIR
+    tic; x = spir(AA,b);
+    spirs(i) = toc;
+    spirs(i)
+
     % FOSSILS
     tic; x = fossils(AA,b);
     foss(i) = toc;
@@ -39,7 +45,7 @@ for i = 1:11
 end
 
 if real_run
-    save('../data/results_timing.mat', 'dir', 'moms', 'foss')
+    save('../data/results_timing.mat', 'dir', 'moms', 'foss', 'spirs')
 end
 
 %% Plot
@@ -53,10 +59,12 @@ loglog(sizes, moms(:,1), 'o-', 'LineWidth', 1, 'Color',...
         blue,'MarkerSize', 10, 'MarkerFaceColor', blue); 
 loglog(sizes, foss(:,1), '^-', 'LineWidth', 1, 'Color',...
         orange, 'MarkerSize', 10, 'MarkerFaceColor', orange); 
+loglog(sizes, spirs(:,1), 'v:', 'LineWidth', 1, 'Color',...
+        pink, 'MarkerSize', 10, 'MarkerFaceColor', pink); 
 
 xlabel('Number of columns $n$')
 ylabel('Time (sec)')
 % axis([-Inf Inf 6e-2 2e2])
-legend({'\texttt{mldivide}','Iter Sketch + Mom','FOSSILS',},'Location','northwest')
+legend({'\texttt{mldivide}','Iter Sketch + Mom','FOSSILS','SPIR'},'Location','northwest')
 saveas(gcf,'../figs/kernel.fig')
 saveas(gcf,'../figs/kernel.png')
