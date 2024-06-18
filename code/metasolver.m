@@ -105,6 +105,8 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
 
     if ~isempty(summary); stats(end+1,:) = summary(x./scale.'); end
     num_iters = 0;
+    stopnow = false;
+    stopnext = false;
 
     for loop = 1:length(iterations)
         c = (V'*(Afun(r,true) - reg^2*x))./sreg;
@@ -128,15 +130,22 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
                 fprintf('Iteration %d\t%e\t%e\n', i, norm(update), be);
             end
             if adaptive_switching && loop == 1 && norm(update) ...
-                    <= (Anorm*norm(x) + 0.04*Acond*norm(r))*eps
+                    <= 3*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps
                 break
             elseif adaptive_stopping && loop == 2 && mod(i,5) == 0
                 xhat = x + V*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
-                if be <= betol; break; end
+                if be <= betol || stopnext
+                    stopnow = true; 
+                    x = xhat;
+                    break; 
+                elseif be <= 4*betol
+                    stopnext = true;
+                end
             end
         end
+        if stopnow; break; end
         x = x + V*(dy./sreg);
         r = b - Afun(x,false);
         if adaptive_stopping
