@@ -1,4 +1,4 @@
-function [x,stats] = iterative_sketching(A,b,varargin)
+function [x,stats,iter] = iterative_sketching(A,b,varargin)
 %ITERATIVE_SKETCHING Solve A*x = b in the least-squares sense by the method
 %of iterative sketching
 %   Optional parameters (use [] for default value):
