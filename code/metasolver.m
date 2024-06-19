@@ -92,6 +92,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     Anorm = max(svals); 
     Afronorm = norm(svals);
     bnorm = norm(b);
+    ftol = 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps;
 
     if Acond > 1/eps/30
         reg = 10 * Afronorm * eps;
@@ -127,10 +128,10 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
                 xhat = x + V*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
-                fprintf('Iteration %d\t%e\t%e\n', i, norm(update), be);
+                fprintf('Iteration %d\t%e / %e\t%e / %e\n', i,...
+                    norm(update), ftol, be, betol);
             end
-            if adaptive_switching && loop == 1 && norm(update) ...
-                    <= 3*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps
+            if adaptive_switching && loop == 1 && norm(update) <= ftol
                 break
             elseif adaptive_stopping && loop == 2 && mod(i,5) == 0
                 xhat = x + V*(dy./sreg);
