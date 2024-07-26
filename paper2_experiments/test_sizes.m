@@ -13,7 +13,7 @@ s = 12;
 
 M = 15; N = 21;
 mvec = round(logspace(3,6,M));
-nvec = round(logspace(log10(50),4,N));
+nvec = round(logspace(log10(50),log10(1e3),N));
 
 % Monitor convergence and operation count (roughly)    
 itcount = zeros(M,N);
@@ -35,13 +35,13 @@ for ii = 1:M
         % Make data
         [A,b,x,r] = random_ls_problem(m,n,cond_A,res_size,Ufull);
 
-        [y,~,num_iters] = fossils(A,b);
+        [y,~,num_iters] = spir(A,b,[],[],[],[],true);
         itcount(ii,jj) = num_iters;
 
         itcount
     end
 end
-save('../data/grid_size_FOSSILS.mat',"mvec","nvec","cond_A","res_size","itcount")
+save('../data/grid_size_SPIR.mat',"mvec","nvec","cond_A","res_size","itcount")
 
 %% Plot
 [nvec_plt,mvec_plt] = meshgrid(nvec',mvec);

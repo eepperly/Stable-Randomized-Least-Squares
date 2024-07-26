@@ -9,11 +9,16 @@ real_run = true;
 est = @(A,b,x) kw_estimate(A,b,x,Inf,"sketched") / norm(A,'fro');
 
 try load('../data/prony.mat'); catch; end
-if ~exist('inprods','var') || length(inprods) < batch_size*num_batches
+if ~exist('inprods','var') || isempty(find(inprods,1)) || ...
+       length(find(inprods)) < batch_size*num_batches
     fprintf('Generating data...\n')
     inprods = zeros(batch_size*num_batches,1);
     hadtest = @(x) 2*(rand(length(x),1) < (x+1)/2)-1;
-    for batch = 1:num_batches
+    first_batch = 1;
+    if ~isempty(find(inprods,1))
+        first_batch = floor(length(find(inprods)) / batch_size) + 1;
+    end
+    for batch = first_batch:num_batches
         disp(batch)
         evolves = expmv(1i*H,last_psi,dt*(1:batch_size));
         inprods(((batch-1)*batch_size+1):(batch*batch_size)) = psi'*evolves;
@@ -27,7 +32,7 @@ end
 measurements = inprods + 1e-6/sqrt(2) * (randn(size(inprods))...
     + 1i*randn(size(inprods)));
 
-m = 7.5e5;
+m = 5e5;
 ns = round(logspace(log10(50),3,11));
 foss = zeros(length(ns),1);
 spirs = zeros(length(ns),1);
@@ -49,7 +54,7 @@ for n_idx = 1:length(ns)
     fprintf('%d\t%e\t%e\t%e\t%e\n', n, foss(n_idx), spirs(n_idx),...
         itsk(n_idx), dir(n_idx))
     if real_run
-        save('../data/prony.mat','foss','itsk','dir','ns','m')
+        save('../data/prony_solve.mat','foss','itsk','dir','ns','m')
     end
 end
 

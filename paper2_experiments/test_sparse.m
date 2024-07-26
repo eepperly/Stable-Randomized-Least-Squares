@@ -8,7 +8,7 @@ fnames = {"bibd_20_10","bibd_22_8","EternityII_A","EternityII_E",...
 idx = [8,1,2,9,10,6,12,3,13,5,11,7,4,16,14,15];
 fnames = fnames(idx); % sorted by number of cols
 
-foss = zeros(length(fnames),2);
+spirs = zeros(length(fnames),2);
 itsk = zeros(length(fnames),2);
 dir  = zeros(length(fnames),2);
 ids  = zeros(length(fnames),1);
@@ -29,7 +29,6 @@ for idx = 1:length(fnames)
     if size(A,1) <= size(A,2)
         A = A';
     end
-    size(A,2)
     b = randn(size(A,1),1);
 
     rows(idx) = size(A,1);
@@ -37,17 +36,13 @@ for idx = 1:length(fnames)
     nnzs(idx) = nnz(A);
     names{idx} = Problem.name;
 
-    tic; x = fossils(A,b,3*size(A,2)); foss(idx,1) = toc;
-    foss(idx,2) = kw_estimate(A,b,x,Inf,"sketched")
-
-    tic; x = iterative_sketching(A,b,3*size(A,2),[],[],[],"optimal",...
-        "optimal"); itsk(idx,1) = toc;
-    itsk(idx,2) = kw_estimate(A,b,x,Inf,"sketched")
+    tic; x = spir(A,b,3*size(A,2)); spirs(idx,1) = toc;
+    % spirs(idx,2) = kw_estimate(A,b,x,Inf,"sketched")
 
     tic; x = A\b; dir(idx,1) = toc;
-    dir(idx,2) = kw_estimate(A,b,x,Inf,"sketched")
+    % dir(idx,2) = kw_estimate(A,b,x,Inf,"sketched")
 
-    fprintf('%d\t%d\t%e\t%e\t%e\n', ids(idx), size(A,1), foss(idx,1),...
-        itsk(idx,1), dir(idx,1))
-    save('../sparse.mat', 'foss', 'itsk', 'dir')
+    fprintf('%d\t%d\t%d\t%e\t%e\n', ids(idx), size(A,1), size(A,2),...
+        spirs(idx,1), dir(idx,1))
+    save('../sparse.mat', 'spirs', 'dir')
 end

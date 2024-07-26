@@ -1,4 +1,4 @@
-%%%% Convergence of FOSSILS
+%%%% Convergence of SPIR
 %%%% Iteration count grid
 
 clear,clc
@@ -15,9 +15,11 @@ ress = logspace(-15,0,N);
 m = 4000; n = 50;
 
 % Monitor convergence and operation count (roughly)    
-bwerr_foss = zeros(N,N);
+bwerr_spir = zeros(N,N);
 bwerr_ism = zeros(N,N);
 itcount = zeros(N,N);
+
+backward_error_function = @backward_error_ls;
 
 U = haarorth(m,n+1);
 %% Loop through conds and residuals
@@ -29,21 +31,24 @@ for ii = 1:N
         % Make data
         [A,b,x,r] = random_ls_problem(m,n,cond_A,res_size,U);
         
-        [y,~,num_iters] = fossils(A,b);
+        [y,~,num_iters] = spir(A,b);
 
-        bwerr_foss(ii,jj) = kw_estimate(A,b,y)/norm(A,'fro');
+        bwerr_spir(ii,jj) = backward_error_function(A,b,y)/norm(A,'fro');
         itcount(ii,jj) = num_iters;
 
         y = iterative_sketching(A,b,[],[],[],[],"optimal","optimal");
-        bwerr_ism(ii,jj) = kw_estimate(A,b,y)/norm(A,'fro');
+        bwerr_ism(ii,jj) = backward_error_function(A,b,y)/norm(A,'fro');
 
         itcount
     end
 end
 save('../data/grid_cond_res_FOSSILS.mat',"m","n", "ress","conds",...
-    "itcount","bwerr_foss","bwerr_ism")
+    "itcount","bwerr_spir","bwerr_ism")
 
 %% Plot
+
+load('../data/grid_cond_res_FOSSILS.mat',"m","n", "ress","conds",...
+    "itcount","bwerr_spir","bwerr_ism")
 
 % First plot: backward error
 
@@ -54,7 +59,7 @@ be_low = 1e-18; be_high = 1e-10;
 clevels = logspace(-18,-10,15);
 
 subplot(121)
-datamat = bwerr_foss;
+datamat = bwerr_spir;
 contourf(ress_plt,conds_plt,datamat,clevels)
 colormap('cool')
 set(gca,'fontsize', 14)
@@ -65,7 +70,7 @@ colorbar('eastoutside')
 clim([be_low, be_high])
 xlabel('Residual $\|\mbox{\boldmath $b$} - \mbox{\boldmath $A$}\mbox{\boldmath $x$}\|$', 'Interpreter','latex', 'fontsize', 14)
 ylabel('Condition number $\kappa$', 'Interpreter','latex', 'fontsize', 14)
-title("FOSSILS",'fontsize', 14,'Interpreter','latex')
+title("SPIR",'fontsize', 14,'Interpreter','latex')
 
 subplot(122)
 datamat = bwerr_ism;
@@ -106,7 +111,7 @@ clim([iter_low iter_high])
 colorbar('eastoutside')
 
 try
-    load('../data/grid_size_FOSSILS.mat')
+    load('../data/grid_size_SPIR.mat')
     
     subplot(122)
     [nvec_plt,mvec_plt] = meshgrid(nvec',mvec);

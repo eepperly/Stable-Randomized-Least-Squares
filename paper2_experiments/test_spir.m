@@ -4,13 +4,13 @@ addpath('../code')
 rng(3423390)
 m = 4000;
 n = 50;
-d = 12*n;
+d = 4*n;
 [A,b,x,r] = random_ls_problem(4000,50,1e12,1e-6);
 colors
 trials = 25;
-lastiter = 25;
+lastiter = 50;
 
-real_run = true;
+real_run = false;
 if real_run
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);backward_error_ls(A,b,y)/norm(A,'fro')];
 else
@@ -18,9 +18,9 @@ else
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);kw_estimate(A,b,y,Inf,S,V)/norm(A,'fro')];
 end
 
-lsqr_runs = nan * zeros(25,3,trials);
-cg_runs  = nan * zeros(25,3,trials);
-foss_runs  = nan * zeros(25,3,trials);
+lsqr_runs = nan * zeros(lastiter+1,3,trials);
+cg_runs  = nan * zeros(lastiter+1,3,trials);
+foss_runs  = nan * zeros(lastiter+1,3,trials);
 for trial = 1:trials
     [~,spir_lsqr] = spir(A,b,d,'halfadaptive',summary,'lsqr',true);
     [~,spir_cg] = spir(A,b,d,'halfadaptive',summary,'cg',true);
