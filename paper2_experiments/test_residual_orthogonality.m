@@ -7,6 +7,7 @@ qrs = zeros(trials,1);
 imom = zeros(trials,1);
 spre = zeros(trials,1);
 foss = zeros(trials,1);
+spirs = zeros(trials,1);
 
 for trial = 1:trials
     % QR
@@ -25,9 +26,14 @@ for trial = 1:trials
     % FOSSILS
     x = fossils(A,b);
     foss(trial) = norm(A'*(b - A*x));
+
+    % SPIR
+    x = spir(A,b);
+    spirs(trial) = norm(A'*(b - A*x));
 end
 
 disp('QR'); median(qrs)
 disp('imom'); median(imom)
 disp('spre'); median(spre)
 disp('FOSSILS'); median(foss)
+disp('SPIR'); median(spirs)

@@ -25,23 +25,23 @@ end
 
 %% LSQR Warm
 
-[~,lsqrwarm]=sketch_and_precondition(A,b,20*n,trials,summary,true,'lsqrwarm',true);
+[~,lsqrwarm]=sketch_and_precondition(A,b,12*n,trials,summary,true,'lsqrwarm',true);
 
 %% LSQR Cold
 
-[~,lsqrcold]=sketch_and_precondition(A,b,20*n,trials,summary,true,'lsqrcold',true);
-
-%% Iterative Sketching
-
-[~,itsk]=iterative_sketching(A,b,20*n,trials,summary,true,[],[],true);
+[~,lsqrcold]=sketch_and_precondition(A,b,12*n,trials,summary,true,'lsqrcold',true);
 
 %% Iterative Sketching with Momentum
 
-[~,mom]=iterative_sketching(A,b,20*n,trials,summary,true,'optimal','optimal',true);
+[~,mom]=iterative_sketching(A,b,12*n,trials,summary,true,'optimal','optimal',true);
 
 %% FOSSILS
 
-[~,fossil]=fossils(A,b,20*n,[],summary,true);
+[~,fossil]=fossils(A,b,12*n,[],summary,true);
+
+%% SPIR
+
+[~,spirs]=spir(A,b,12*n,[],summary,[],true);
 
 %% QR
 
@@ -55,22 +55,23 @@ close all
 for j = 1:3
     figure(j)
     semilogy(0:trials, lsqrcold(:,j), '-.', 'LineWidth', 4, 'Color', yellow); hold on
-    semilogy(0:trials, itsk(:,j), '--', 'LineWidth', 4, 'Color', pink); 
     semilogy(0:trials, mom(:,j), 'o-', 'LineWidth', 1, 'Color',...
         blue,'MarkerSize', 10, 'MarkerFaceColor', blue); 
     semilogy(0:trials, lsqrwarm(:,j), 's-', 'LineWidth', 1, 'Color',...
         purple, 'MarkerSize', 10, 'MarkerFaceColor', purple);
     semilogy(0:(length(fossil(:,j))-1), fossil(:,j), '^-', 'LineWidth', 1, 'Color',...
         orange, 'MarkerSize', 10, 'MarkerFaceColor', orange); 
+    semilogy(0:(length(spirs(:,j))-1), spirs(:,j), 'v:', 'LineWidth', 1, 'Color',...
+        pink, 'MarkerSize', 10, 'MarkerFaceColor', pink); 
     yline(qr_vals(j),'k:', 'LineWidth', 3)
     xlabel('Iteration $i$')
     if j == 1
         ylabel('Forward error $\|\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i\|/\|\mbox{\boldmath $x$}\|$')
         legend('Sketch\&Pre ($\mbox{\boldmath $x$}_0=\mbox{\boldmath $0$}$)',...
-            'Iter Sketch',...
             'Iter Sketch + Mom',...
             'Sketch\&Pre',...
             'FOSSILS',...
+            'SPIR',...
             'QR')
 	if real_run
             saveas(gcf,'../figs/compare_forward.fig')
