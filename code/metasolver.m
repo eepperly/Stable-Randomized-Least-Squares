@@ -96,7 +96,6 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     Anorm = max(svals); 
     Afronorm = norm(svals);
     bnorm = norm(b);
-    ftol = 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps;
 
     if Acond > 1/eps/30
         if lowrankprecon
@@ -120,7 +119,8 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     % Initial guess
     x = Vreg*((Ureg'*(S*b)) ./ sreg);
     r = b - Afun(x,false);
-
+    
+    ftol = 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps;
     betol = Afronorm * betol; % Backward error tolerance
 
     if ~isempty(summary); stats(end+1,:) = summary(x./scale.'); end
