@@ -90,8 +90,6 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
         SA = full(Afun(S',true)');
     end
     [U,svals,V] = svd(SA,'econ'); svals = diag(svals);
-    x = V*((U'*(S*b)) ./ svals);
-    r = b - Afun(x,false);
 
     % Norm and condition number estimation
     Acond = max(svals) / min(svals);
@@ -105,16 +103,23 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
             ind = svals/max(svals) > eps*30;
             sreg = svals(ind);
             Vreg = V(:, ind);
+            Ureg = U(:, ind);
         else
             reg = 10 * Afronorm * eps;
             sreg = sqrt(svals.^2 + reg^2);
             Vreg = V;
+            Ureg = U;
         end
     else
         reg = 0;
         sreg = svals;
         Vreg = V;
+        Ureg = U;
     end
+
+    % Initial guess
+    x = Vreg*((Ureg'*(S*b)) ./ sreg);
+    r = b - Afun(x,false);
 
     betol = Afronorm * betol; % Backward error tolerance
 
