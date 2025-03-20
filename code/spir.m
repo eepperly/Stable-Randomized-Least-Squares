@@ -18,6 +18,9 @@ function [x,stats,num_iters] = spir(A,b,varargin)
 %   - verbose: if true, print at each iteration. (default false)
 %   - reproducible: if true, use slower, reproducible implementation of
 %     sparse sign embeddings (default false)
+%   - lowrankprecon: if true, use a non-square factorization for the
+%     preconditioner in case of severe ill-conditioning. If false, use
+%     explicit regularization in the singular values. (default false)
 
     if length(varargin) >= 4
         if ~isempty(varargin{4})
