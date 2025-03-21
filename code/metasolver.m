@@ -98,16 +98,13 @@ length(varargin)
     bnorm = norm(b);
 
     if Acond > 1/eps/30
-        'We are regularising'
         if lowrankprecon
-            'here'
             reg = 0;
             ind = svals/max(svals) > eps*30;
             sreg = svals(ind);
             Vreg = V(:, ind);
             Ureg = U(:, ind);
         else
-            'or here'
             reg = 10 * Afronorm * eps;
             sreg = sqrt(svals.^2 + reg^2);
             Vreg = V;
