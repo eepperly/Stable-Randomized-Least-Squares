@@ -4,19 +4,19 @@ addpath('../code')
 addpath('../utils')
 colors
 
-rng(32439)
+%rng(32439)
 
-m = 4000;
+m = 2000;
 n = 50;
 
 trials = 25; 
 
-cond_A = 10^20;
+cond_A = 10^25;
 res_size = 10^-12;
 
 [A,b,x,r,S,V] = random_ls_problem(m,n,cond_A,res_size);
 
-real_run = false;
+real_run = true;
 if real_run
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);backward_error_ls(A,b,y)/norm(A,'fro')];
 else
@@ -24,19 +24,15 @@ else
 end
 
 %% FOSSILS
-'Fossils 1'
 [~,fossil]=fossils(A,b,12*n,[],summary,true);
 
 %% SPIR
-'SPIR 1'
 [~,spirs]=spir(A,b,12*n,[],summary,'lsqr',true);
 
 %% FOSSILS
-'FOSSILS 1'
 [~,fossil_lowrank]=fossils(A,b,12*n,[],summary,true, false, true);
 
 %% SPIR
-'SPIR 1'
 [~,spirs_lowrank]=spir(A,b,12*n,[],summary,'lsqr',true, false, true);
 
 %% QR
@@ -60,39 +56,30 @@ for j = 1:3
     semilogy(0:(length(spirs_lowrank(:,j))-1), spirs_lowrank(:,j), '*:', 'LineWidth', 1, 'Color',...
         purple, 'MarkerSize', 10, 'MarkerFaceColor', purple); 
     yline(qr_vals(j),'k:', 'LineWidth', 3) 
-    hold off
     xlabel('Iteration $i$')
     if j == 1
         ylabel('Forward error $\|\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i\|/\|\mbox{\boldmath $x$}\|$')
-        
-	if real_run
-            saveas(gcf,'../figs/compare_forward.fig')
-            saveas(gcf,'../figs/compare_forward.png')
-	end
-    elseif j == 2
-        ylabel('Residual error $\|\mbox{\boldmath $A$}(\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i)\|/\|\mbox{\boldmath $b$}\|$')
-	if real_run
-            saveas(gcf,'../figs/compare_residual.fig')
-            saveas(gcf,'../figs/compare_residual.png')
-	end
-    elseif j == 3
-        ylabel('Backward error $\mbox{BE}_\infty(\mbox{\boldmath $\widehat{x}$}_i)$')
-	if real_run
-            saveas(gcf,'../figs/compare_backward.fig')
-            saveas(gcf,'../figs/compare_backward.png')
-	end
-    end
-    legend('FOSSILS (explicit reg.)',...
+        legend('FOSSILS (explicit reg.)',...
             'SPIR (explicit reg.)',...
             'FOSSILS (low-rank precon.)',...
             'SPIR (low-rank precon.)',...
             'QR')
+    elseif j == 2
+        ylabel('Residual error $\|\mbox{\boldmath $A$}(\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i)\|/\|\mbox{\boldmath $b$}\|$')
+    elseif j == 3
+        ylabel('Backward error $\mbox{BE}_\infty(\mbox{\boldmath $\widehat{x}$}_i)$')
+        yline(eps,'r:', 'LineWidth', 3) 
+        legend('FOSSILS (explicit reg.)',...
+            'SPIR (explicit reg.)',...
+            'FOSSILS (low-rank precon.)',...
+            'SPIR (low-rank precon.)',...
+            'QR',...
+            '$u$')
+    end
+    grid on
     set(gca,'FontSize',14)
 end
-sgtitle(['$A$ is ', num2str(m), '$\times$', num2str(n), ' with $\kappa_2(A) = $', num2str(cond(A), '%.1e'), ' and $\|r^*\| = $', num2str(res_size)])
-
-%% Save
-
-if real_run
-    save('../data/results_sketch_poly.mat', 'lsqrwarm', 'lsqrcold', 'itsk', 'fossil', 'mom', 'qr_vals', 'trials')
-end
+svals = svd(A, 'econ'); ind = svals/max(svals) > eps*30;
+sgtitle(['$A$ is ', num2str(m), '$\times$', num2str(n), ' with $\|r^*\| = $', num2str(res_size), ...
+    ', $\kappa_2(A) = $', num2str(cond(A), '%.1e'), ' and $A$ is of numerical rank ', num2str(sum(ind))])
+set(gcf, 'Position', [232, 453, 1408, 454])

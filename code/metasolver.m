@@ -42,7 +42,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     else
         reproducible = false;
     end
-length(varargin)
+
     if length(varargin) >= 6 && ~isempty(varargin{6})
         lowrankprecon = varargin{6};
     else
