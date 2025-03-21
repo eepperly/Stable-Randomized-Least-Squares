@@ -42,7 +42,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     else
         reproducible = false;
     end
-
+length(varargin)
     if length(varargin) >= 6 && ~isempty(varargin{6})
         lowrankprecon = varargin{6};
     else
@@ -98,12 +98,16 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     bnorm = norm(b);
 
     if Acond > 1/eps/30
+        'We are regularising'
         if lowrankprecon
+            'here'
+            reg = 0;
             ind = svals/max(svals) > eps*30;
             sreg = svals(ind);
             Vreg = V(:, ind);
             Ureg = U(:, ind);
         else
+            'or here'
             reg = 10 * Afronorm * eps;
             sreg = sqrt(svals.^2 + reg^2);
             Vreg = V;
@@ -140,7 +144,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
             num_iters = num_iters + 1;
             [dy,update,solverdata] = iterate(solverdata);
             if ~isempty(summary)
-                stats(end+1,:) = summary((x + V*(dy./sreg)) ...
+                stats(end+1,:) = summary((x + Vreg*(dy./sreg)) ...
                     ./ scale.'); %#ok<AGROW>
             end
             if verbose
