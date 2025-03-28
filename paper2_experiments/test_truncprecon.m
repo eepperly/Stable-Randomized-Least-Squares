@@ -4,15 +4,15 @@ addpath('../code')
 addpath('../utils')
 colors
 
-%rng(32439)
+rng(32439)
 
-m = 2000;
+m = 4000;
 n = 50;
 
 trials = 25; 
 
-cond_A = 10^25;
-res_size = 10^-12;
+cond_A = 10^20;
+res_size = 10^-2;
 
 [A,b,x,r,S,V] = random_ls_problem(m,n,cond_A,res_size);
 
@@ -23,16 +23,16 @@ else
     summary = @(y) [norm(y-x)/norm(x);norm(b-A*y-r)/norm(b);kw_estimate(A,b,y,Inf,S,V)/norm(A,'fro')];
 end
 
-%% FOSSILS
-[~,fossil]=fossils(A,b,12*n,[],summary,true);
+%% FOSSILS with explicit regularization
+[~,fossil]=fossils(A,b,12*n,[],summary,true, false, false);
 
-%% SPIR
-[~,spirs]=spir(A,b,12*n,[],summary,'lsqr',true);
+%% SPIR with explicit regularization
+[~,spirs]=spir(A,b,12*n,[],summary,'lsqr',true, false, true);
 
-%% FOSSILS
-[~,fossil_lowrank]=fossils(A,b,12*n,[],summary,true, false, true);
+%% FOSSILS with truncated preconditioner
+[~,fossil_lowrank]=fossils(A,b,12*n,[],summary, true, false, true);
 
-%% SPIR
+%% SPIR with truncated preconditioner
 [~,spirs_lowrank]=spir(A,b,12*n,[],summary,'lsqr',true, false, true);
 
 %% QR
@@ -51,9 +51,9 @@ for j = 1:3
     hold on
     semilogy(0:(length(spirs(:,j))-1), spirs(:,j), 'v-', 'LineWidth', 1, 'Color',...
         pink, 'MarkerSize', 10, 'MarkerFaceColor', pink); 
-    semilogy(0:(length(fossil_lowrank(:,j))-1), fossil_lowrank(:,j), 's:', 'LineWidth', 1, 'Color',...
+    semilogy(0:(length(fossil_lowrank(:,j))-1), fossil_lowrank(:,j), 's-.', 'LineWidth', 1, 'Color',...
         blue, 'MarkerSize', 10, 'MarkerFaceColor', blue); 
-    semilogy(0:(length(spirs_lowrank(:,j))-1), spirs_lowrank(:,j), '*:', 'LineWidth', 1, 'Color',...
+    semilogy(0:(length(spirs_lowrank(:,j))-1), spirs_lowrank(:,j), '*-.', 'LineWidth', 1, 'Color',...
         purple, 'MarkerSize', 10, 'MarkerFaceColor', purple); 
     yline(qr_vals(j),'k:', 'LineWidth', 3) 
     xlabel('Iteration $i$')
@@ -61,8 +61,8 @@ for j = 1:3
         ylabel('Forward error $\|\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i\|/\|\mbox{\boldmath $x$}\|$')
         legend('FOSSILS (explicit reg.)',...
             'SPIR (explicit reg.)',...
-            'FOSSILS (low-rank precon.)',...
-            'SPIR (low-rank precon.)',...
+            'FOSSILS (truncated precon.)',...
+            'SPIR (truncated precon.)',...
             'QR')
     elseif j == 2
         ylabel('Residual error $\|\mbox{\boldmath $A$}(\mbox{\boldmath $x$}-\mbox{\boldmath $\widehat{x}$}_i)\|/\|\mbox{\boldmath $b$}\|$')
@@ -71,8 +71,8 @@ for j = 1:3
         yline(eps,'r:', 'LineWidth', 3) 
         legend('FOSSILS (explicit reg.)',...
             'SPIR (explicit reg.)',...
-            'FOSSILS (low-rank precon.)',...
-            'SPIR (low-rank precon.)',...
+            'FOSSILS (truncated precon.)',...
+            'SPIR (truncated precon.)',...
             'QR',...
             '$u$')
     end

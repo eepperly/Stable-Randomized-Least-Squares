@@ -44,9 +44,9 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     end
 
     if length(varargin) >= 6 && ~isempty(varargin{6})
-        lowrankprecon = varargin{6};
+        truncprecon = varargin{6};
     else
-        lowrankprecon = false;
+        truncprecon = true;
     end
     
     if ~reproducible && exist('sparsesign','file') == 3
@@ -98,7 +98,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     bnorm = norm(b);
 
     if Acond > 1/eps/30
-        if lowrankprecon
+        if truncprecon
             reg = 0;
             ind = svals/max(svals) > eps*30;
             sreg = svals(ind);
