@@ -42,6 +42,12 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     else
         reproducible = false;
     end
+
+    if length(varargin) >= 6 && ~isempty(varargin{6})
+        truncprecon = varargin{6};
+    else
+        truncprecon = true;
+    end
     
     if ~reproducible && exist('sparsesign','file') == 3
         S = sparsesign(d,m,8);
@@ -84,24 +90,38 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
         SA = full(Afun(S',true)');
     end
     [U,svals,V] = svd(SA,'econ'); svals = diag(svals);
-    x = V*((U'*(S*b)) ./ svals);
-    r = b - Afun(x,false);
 
     % Norm and condition number estimation
     Acond = max(svals) / min(svals);
     Anorm = max(svals); 
     Afronorm = norm(svals);
     bnorm = norm(b);
-    ftol = 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps;
 
     if Acond > 1/eps/30
-        reg = 10 * Afronorm * eps;
-        sreg = sqrt(svals.^2 + reg^2);
+        if truncprecon
+            reg = 0;
+            ind = svals/max(svals) > eps*30;
+            sreg = svals(ind);
+            Vreg = V(:, ind);
+            Ureg = U(:, ind);
+        else
+            reg = 10 * Afronorm * eps;
+            sreg = sqrt(svals.^2 + reg^2);
+            Vreg = V;
+            Ureg = U;
+        end
     else
         reg = 0;
         sreg = svals;
+        Vreg = V;
+        Ureg = U;
     end
 
+    % Initial guess
+    x = Vreg*((Ureg'*(S*b)) ./ sreg);
+    r = b - Afun(x,false);
+    
+    ftol = 10*(Anorm*norm(x) + 0.04*Acond*norm(r))*eps;
     betol = Afronorm * betol; % Backward error tolerance
 
     if ~isempty(summary); stats(end+1,:) = summary(x./scale.'); end
@@ -110,22 +130,22 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
     stopnext = false;
 
     for loop = 1:length(iterations)
-        c = (V'*(Afun(r,true) - reg^2*x))./sreg;
+        c = (Vreg'*(Afun(r,true) - reg^2*x))./sreg;
         dy = c;
         solverdata = setup(c,dy,[r;-reg*x],...
-            @(xx) RAAR(xx,V,sreg,Afun,reg),...
-            @(xx) AR(xx,V,sreg,Afun,reg),...
-            @(xx) RA(xx,V,sreg,Afun,reg),d);
+            @(xx) RAAR(xx,Vreg,sreg,Afun,reg),...
+            @(xx) AR(xx,Vreg,sreg,Afun,reg),...
+            @(xx) RA(xx,Vreg,sreg,Afun,reg),d);
         if verbose; fprintf('Beginning loop %d\n', loop); end
         for i = 1:iterations(loop)
             num_iters = num_iters + 1;
             [dy,update,solverdata] = iterate(solverdata);
             if ~isempty(summary)
-                stats(end+1,:) = summary((x + V*(dy./sreg)) ...
+                stats(end+1,:) = summary((x + Vreg*(dy./sreg)) ...
                     ./ scale.'); %#ok<AGROW>
             end
             if verbose
-                xhat = x + V*(dy./sreg);
+                xhat = x + Vreg*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 fprintf('Iteration %d\t%e / %e\t%e / %e\n', i,...
@@ -134,7 +154,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
             if adaptive_switching && loop == 1 && norm(update) <= ftol
                 break
             elseif adaptive_stopping && loop == 2 && mod(i,5) == 0
-                xhat = x + V*(dy./sreg);
+                xhat = x + Vreg*(dy./sreg);
                 rhat = b - Afun(xhat,false);
                 be = posterior_estimate(Afun,xhat,rhat,V,svals,Afronorm,bnorm);
                 if be <= betol || stopnext
@@ -147,7 +167,7 @@ function [x,stats,num_iters] = metasolver(A,b,setup,iterate,varargin)
             end
         end
         if stopnow; break; end
-        x = x + V*(dy./sreg);
+        x = x + Vreg*(dy./sreg);
         r = b - Afun(x,false);
         if adaptive_stopping
             be = posterior_estimate(Afun,x,r,V,svals,Afronorm,bnorm);
