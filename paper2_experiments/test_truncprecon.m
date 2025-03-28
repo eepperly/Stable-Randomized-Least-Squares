@@ -27,7 +27,7 @@ end
 [~,fossil]=fossils(A,b,12*n,[],summary,true, false, false);
 
 %% SPIR with explicit regularization
-[~,spirs]=spir(A,b,12*n,[],summary,'lsqr',true, false, true);
+[~,spirs]=spir(A,b,12*n,[],summary,'lsqr',true, false, false);
 
 %% FOSSILS with truncated preconditioner
 [~,fossil_lowrank]=fossils(A,b,12*n,[],summary, true, false, true);
